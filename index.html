@@ -93,7 +93,7 @@
                         <span>M4.2 Epicenter</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="w-4 h-0.5 bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.3)]"></span>
+                        <span class="w-4 h-1 bg-[#5D4037] shadow-[0_0_5px_rgba(93,64,55,0.2)]"></span>
                         <span>Tectonic Lineaments (2011)</span>
                     </div>
                 </div>
@@ -119,6 +119,7 @@
         // Configuration
         const epicenter = [21.993, 96.118];
         const geojsonUrl = 'https://raw.githubusercontent.com/drtinkooo/myanmar-earthquake-archive/main/Myanmar_Tectonic_Map_2011.geojson';
+        const lineamentColor = '#5D4037'; // Dark Brown
 
         // Initialize Map
         const map = L.map('map', {
@@ -167,7 +168,7 @@
                 L.geoJSON(data, {
                     style: function(feature) {
                         return {
-                            color: '#f97316', // orange-500
+                            color: lineamentColor,
                             weight: 2.5,
                             opacity: 0.8,
                             dashArray: feature.properties.TYPE === 'Inferred' ? '5, 5' : null
@@ -175,14 +176,14 @@
                     },
                     onEachFeature: function(feature, layer) {
                         let props = feature.properties;
-                        let tip = `<div class="p-1 font-sans text-gray-800"><b class="text-orange-600">${props.NAME || 'Fault/Lineament'}</b><br><span class="text-[10px] text-gray-500">Type: ${props.TYPE || 'Unknown'}</span></div>`;
+                        let tip = `<div class="p-1 font-sans text-gray-800"><b style="color: ${lineamentColor}">${props.NAME || 'Fault/Lineament'}</b><br><span class="text-[10px] text-gray-500">Type: ${props.TYPE || 'Unknown'}</span></div>`;
                         layer.bindPopup(tip);
                         
                         layer.on('mouseover', function() {
                             this.setStyle({ color: '#dc2626', weight: 4, opacity: 1 });
                         });
                         layer.on('mouseout', function() {
-                            this.setStyle({ color: '#f97316', weight: 2.5, opacity: 0.8 });
+                            this.setStyle({ color: lineamentColor, weight: 2.5, opacity: 0.8 });
                         });
                     }
                 }).addTo(map);
