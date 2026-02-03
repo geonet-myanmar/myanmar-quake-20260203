@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myanmar Seismicity & Tectonics Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Tailwind for UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        #map { height: 100vh; width: 100%; background: #e5e7eb; }
+        
+        /* Pulse Animation for Epicenter */
+        .pulse {
+            display: block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ef4444;
+            cursor: pointer;
+            box-shadow: 0 0 0 rgba(239, 68, 68, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Custom Scrollbar for Info Panel */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+
+        .leaflet-popup-content-wrapper {
+            background: #ffffff;
+            color: #1f2937;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .leaflet-popup-tip { background: #ffffff; }
+    </style>
+</head>
+<body class="bg-white text-gray-900 font-sans">
+
+    <!-- Top Navigation Overlay -->
+    <nav class="absolute top-0 left-0 right-0 z-[1001] bg-white/90 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex justify-between items-center shadow-sm">
+        <div>
+            <h1 class="text-lg font-bold flex items-center gap-2 text-gray-800">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-600"><path d="M2 12h5l2 8 5-16 2 8h5"/></svg>
+                Myanmar Seismic Activity
+            </h1>
+            <p class="text-xs text-gray-500">Event: M4.2 • 2026-02-03 12:42 MMT</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="zoomToEpicenter()" class="bg-gray-100 hover:bg-gray-200 text-xs px-3 py-1.5 rounded-md border border-gray-300 transition-colors text-gray-700 font-medium">Focus Epicenter</button>
+        </div>
+    </nav>
+
+    <!-- Side Panel -->
+    <aside class="absolute top-20 left-4 z-[1000] w-72 max-h-[calc(100vh-120px)] bg-white/95 backdrop-blur-md border border-gray-200 rounded-xl overflow-hidden shadow-xl flex flex-col">
+        <div class="p-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Earthquake Details</h2>
+        </div>
+        <div class="p-4 space-y-4 overflow-y-auto custom-scrollbar">
+            <div class="grid grid-cols-2 gap-2">
+                <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                    <p class="text-[10px] text-gray-500 uppercase">Magnitude</p>
+                    <p class="text-xl font-bold text-red-600">4.2</p>
+                </div>
+                <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                    <p class="text-[10px] text-gray-500 uppercase">Depth</p>
+                    <p class="text-xl font-bold text-blue-600">10 <span class="text-xs font-normal">km</span></p>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-[10px] text-gray-500 uppercase mb-1">Origin Time (MMT)</p>
+                <p class="text-sm font-medium text-gray-800">Feb 03, 2026 • 12:42:03</p>
+                <p class="text-[10px] text-gray-400 italic">UTC: 06:12:03</p>
+            </div>
+
+            <div class="pt-2 border-t border-gray-200">
+                <h3 class="text-[10px] text-gray-500 uppercase mb-2">Map Legend</h3>
+                <div class="space-y-2 text-xs text-gray-700">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-red-600 shadow-[0_0_8px_rgba(220,38,38,0.5)]"></span>
+                        <span>M4.2 Epicenter</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-4 h-0.5 bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.3)]"></span>
+                        <span>Tectonic Lineaments (2011)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 mt-2 border-t border-gray-100">
+                <a href="https://www.google.com/maps/search/?api=1&query=21.993,96.118" target="_blank" class="block text-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 rounded-lg transition-colors">
+                    View on Google Maps
+                </a>
+            </div>
+        </div>
+        <div class="p-3 bg-gray-50 text-[10px] text-gray-400 text-center border-t border-gray-100">
+            Data: drtinkooo / Myanmar Earthquake Archive
+        </div>
+    </aside>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Configuration
+        const epicenter = [21.993, 96.118];
+        const geojsonUrl = 'https://raw.githubusercontent.com/drtinkooo/myanmar-earthquake-archive/main/Myanmar_Tectonic_Map_2011.geojson';
+
+        // Initialize Map
+        const map = L.map('map', {
+            zoomControl: false,
+            attributionControl: true
+        }).setView(epicenter, 7);
+
+        // Add Scale
+        L.control.scale({ position: 'bottomright', imperial: false }).addTo(map);
+        // Add Zoom Control to Bottom Right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // OSM Base Layer
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Epicenter Marker
+        const iconPulse = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div class="pulse"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        const epicenterMarker = L.marker(epicenter, { icon: iconPulse }).addTo(map);
+        
+        const popupContent = `
+            <div class="p-1 font-sans">
+                <h3 class="font-bold text-red-600 border-b border-gray-200 pb-1 mb-2">Earthquake M4.2</h3>
+                <table class="text-xs w-full text-gray-700">
+                    <tr><td class="text-gray-400 py-1 pr-2 uppercase text-[9px]">Time:</td><td>12:42:03 MMT</td></tr>
+                    <tr><td class="text-gray-400 py-1 pr-2 uppercase text-[9px]">Depth:</td><td>10 km</td></tr>
+                    <tr><td class="text-gray-400 py-1 pr-2 uppercase text-[9px]">Lat/Lon:</td><td>21.993, 96.118</td></tr>
+                </table>
+                <p class="text-[10px] mt-2 text-gray-500 italic">Region: Central Myanmar</p>
+            </div>
+        `;
+        epicenterMarker.bindPopup(popupContent);
+
+        // Fetch Tectonic Data
+        fetch(geojsonUrl)
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: function(feature) {
+                        return {
+                            color: '#f97316', // orange-500
+                            weight: 2.5,
+                            opacity: 0.8,
+                            dashArray: feature.properties.TYPE === 'Inferred' ? '5, 5' : null
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        let props = feature.properties;
+                        let tip = `<div class="p-1 font-sans text-gray-800"><b class="text-orange-600">${props.NAME || 'Fault/Lineament'}</b><br><span class="text-[10px] text-gray-500">Type: ${props.TYPE || 'Unknown'}</span></div>`;
+                        layer.bindPopup(tip);
+                        
+                        layer.on('mouseover', function() {
+                            this.setStyle({ color: '#dc2626', weight: 4, opacity: 1 });
+                        });
+                        layer.on('mouseout', function() {
+                            this.setStyle({ color: '#f97316', weight: 2.5, opacity: 0.8 });
+                        });
+                    }
+                }).addTo(map);
+            })
+            .catch(err => {
+                console.error('Error loading Tectonic GeoJSON:', err);
+            });
+
+        function zoomToEpicenter() {
+            map.flyTo(epicenter, 10, { duration: 1.5 });
+            setTimeout(() => epicenterMarker.openPopup(), 1600);
+        }
+
+        // Handle Window Resize
+        window.addEventListener('resize', () => map.invalidateSize());
+
+    </script>
+</body>
+</html>
